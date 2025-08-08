@@ -1,0 +1,53 @@
+# Dataset Preprocessing + Augmentation
+def prepare_dataset(ds, training=False):
+    ds = ds.map(lambda x, y: (tf.cast(x, tf.float32) / 255.0, y),
+                num_parallel_calls=AUTOTUNE)
+    if training:
+        augmentation = Sequential([
+            RandomFlip("horizontal"),
+            RandomRotation(0.1),
+            RandomZoom(0.1),
+        ])
+        ds = ds.map(lambda x, y: (augmentation(x, training=True), y),
+                    num_parallel_calls=AUTOTUNE)
+    return ds.prefetch(buffer_size=AUTOTUNE)
+
+train_ds = prepare_dataset(train_ds, training=True)
+val_ds = prepare_dataset(val_ds, training=False)
+
+
+
+
+
+
+model = Sequential([
+    Input(shape=(*IMAGE_SIZE, 3)),
+    Conv2D(32, (3, 3), activation="relu", padding="same"),
+    BatchNormalization(),
+    MaxPooling2D(2, 2),
+
+    Conv2D(64, (3, 3), activation="relu", padding="same"),
+    BatchNormalization(),
+    MaxPooling2D(2, 2),
+
+    Conv2D(128, (3, 3), activation="relu", padding="same"),
+    BatchNormalization(),
+    MaxPooling2D(2, 2),
+
+    Flatten(),
+    Dense(128, activation="relu"),
+    Dropout(0.3),
+    Dense(64, activation="relu"),
+    Dropout(0.3),
+    Dense(1, activation="sigmoid")  # Binary classification
+])
+
+
+
+
+
+# Callback Setup
+callbacks = [
+    keras.callbacks.EarlyStopping(monitor="val_loss", patience=3, restore_best_weights=True),
+    keras.callbacks.ModelCheckpoint("best_dogcat.h5", save_best_only=True)
+]
